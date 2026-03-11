@@ -5,7 +5,7 @@ metadata:
   revision: 1
   updated-on: "2026-03-11"
   source: maintainer
-  tags: "tavily,search,extract,crawl,research,ai,agents,rag,best-practices"
+  tags: "tavily,search,extract,crawl,research,ai,agents,rag,web-search,web-scraping,best-practices"
 ---
 
 # Tavily

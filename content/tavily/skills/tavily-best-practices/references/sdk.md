@@ -59,16 +59,21 @@ responses = await asyncio.gather(
 ```python
 response = client.search(
     query="quantum computing breakthroughs",
-    search_depth="advanced",      # "basic" | "advanced"
+    search_depth="advanced",      # "ultra-fast" | "fast" | "basic" | "advanced"
     topic="general",              # "general" | "news" | "finance"
     max_results=10,               # 0-20
+    chunks_per_source=3,          # 1-3, fast/advanced depth only
     include_answer=False,         # bool | "basic" | "advanced"
     include_raw_content=False,    # bool | "markdown" | "text"
     include_images=False,
+    include_image_descriptions=False,
+    include_favicon=False,
     time_range="week",            # "day" | "week" | "month" | "year"
     include_domains=["arxiv.org"],
     exclude_domains=["reddit.com"],
-    country="united states"
+    country="united states",
+    exact_match=False,
+    include_usage=False
 )
 ```
 
@@ -79,9 +84,11 @@ response = client.extract(
     urls=["https://example.com/page1", "https://example.com/page2"],
     extract_depth="basic",        # "basic" | "advanced"
     format="markdown",            # "markdown" | "text"
-    include_images=False,
     query="focus query",          # Reranks chunks by relevance
-    chunks_per_source=3           # 1-5, requires query
+    chunks_per_source=3,          # 1-5, requires query
+    include_images=False,
+    include_favicon=False,
+    include_usage=False
 )
 ```
 
@@ -91,15 +98,19 @@ response = client.extract(
 response = client.crawl(
     url="https://docs.example.com",
     max_depth=2,                  # 1-5
-    max_breadth=20,
+    max_breadth=20,               # 1-500
     limit=50,
     instructions="Find API documentation",
     chunks_per_source=3,          # 1-5, requires instructions
     select_paths=["/docs/.*"],
     exclude_paths=["/blog/.*"],
-    extract_depth="basic",
-    format="markdown",
-    allow_external=True
+    extract_depth="basic",        # "basic" | "advanced"
+    format="markdown",            # "markdown" | "text"
+    allow_external=True,
+    include_images=False,
+    include_favicon=False,
+    timeout=150,                  # 10-150 seconds
+    include_usage=False
 )
 ```
 
@@ -108,12 +119,14 @@ response = client.crawl(
 ```python
 response = client.map(
     url="https://docs.example.com",
-    max_depth=2,
-    max_breadth=20,
+    max_depth=2,                  # 1-5
+    max_breadth=20,               # 1-500
     limit=50,
     instructions="Find all API pages",
     select_paths=["/api/.*"],
-    allow_external=False
+    allow_external=False,
+    timeout=150,                  # 10-150 seconds
+    include_usage=False
 )
 ```
 
@@ -177,16 +190,21 @@ const client = tavily({
 
 ```javascript
 const response = await client.search("quantum computing", {
-  searchDepth: "advanced",      // "basic" | "advanced"
+  searchDepth: "advanced",      // "ultra-fast" | "fast" | "basic" | "advanced"
   topic: "general",             // "general" | "news" | "finance"
   maxResults: 10,               // 0-20
+  chunksPerSource: 3,           // 1-3, fast/advanced depth only
   includeAnswer: false,         // boolean | "basic" | "advanced"
   includeRawContent: false,     // boolean | "markdown" | "text"
   includeImages: false,
+  includeImageDescriptions: false,
+  includeFavicon: false,
   timeRange: "week",            // "day" | "week" | "month" | "year"
   includeDomains: ["arxiv.org"],
   excludeDomains: ["reddit.com"],
-  country: "united states"
+  country: "united states",
+  exactMatch: false,
+  includeUsage: false
 });
 ```
 
@@ -199,8 +217,11 @@ const response = await client.extract([
 ], {
   extractDepth: "basic",        // "basic" | "advanced"
   format: "markdown",           // "markdown" | "text"
+  query: "focus query",         // Reranks chunks
+  chunksPerSource: 3,           // 1-5, requires query
   includeImages: false,
-  query: "focus query"          // Reranks chunks
+  includeFavicon: false,
+  includeUsage: false
 });
 ```
 
@@ -208,14 +229,20 @@ const response = await client.extract([
 
 ```javascript
 const response = await client.crawl("https://docs.example.com", {
-  maxDepth: 2,
-  maxBreadth: 20,
+  maxDepth: 2,                  // 1-5
+  maxBreadth: 20,               // 1-500
   limit: 50,
   instructions: "Find API documentation",
+  chunksPerSource: 3,           // 1-5, requires instructions
   selectPaths: ["/docs/.*"],
   excludePaths: ["/blog/.*"],
-  extractDepth: "basic",
-  format: "markdown"
+  extractDepth: "basic",        // "basic" | "advanced"
+  format: "markdown",           // "markdown" | "text"
+  allowExternal: true,
+  includeImages: false,
+  includeFavicon: false,
+  timeout: 150,                 // 10-150 seconds
+  includeUsage: false
 });
 ```
 
@@ -223,10 +250,14 @@ const response = await client.crawl("https://docs.example.com", {
 
 ```javascript
 const response = await client.map("https://docs.example.com", {
-  maxDepth: 2,
-  maxBreadth: 20,
+  maxDepth: 2,                  // 1-5
+  maxBreadth: 20,               // 1-500
   limit: 50,
-  instructions: "Find all API pages"
+  instructions: "Find all API pages",
+  selectPaths: ["/api/.*"],
+  allowExternal: false,
+  timeout: 150,                 // 10-150 seconds
+  includeUsage: false
 });
 ```
 

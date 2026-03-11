@@ -7,7 +7,7 @@ metadata:
   revision: 1
   updated-on: "2026-03-11"
   source: maintainer
-  tags: "tavily,search,extract,crawl,research,ai,agents,rag"
+  tags: "tavily,search,extract,crawl,research,ai,agents,rag,web-search,web-scraping"
 ---
 # Tavily JavaScript SDK
 
@@ -23,6 +23,8 @@ npm install @tavily/core
 ```
 
 ## Initialization
+
+Set `TAVILY_API_KEY` in your environment, or pass it directly.
 
 ```javascript
 const { tavily } = require("@tavily/core");
@@ -64,21 +66,33 @@ const response = await client.search("latest developments in quantum computing")
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `query` **(required)** | `string` | — | Search query (keep under 400 chars) |
-| `searchDepth` | `string` | `"basic"` | `"basic"` or `"advanced"`. Advanced returns reranked chunks (2 credits) |
+| `searchDepth` | `string` | `"basic"` | `"ultra-fast"`, `"fast"`, `"basic"`, or `"advanced"` |
 | `topic` | `string` | `"general"` | `"general"`, `"news"`, or `"finance"` |
 | `maxResults` | `number` | `5` | Number of results (0–20) |
+| `chunksPerSource` | `number` | `3` | Chunks per result (1–3, only with `"fast"` or `"advanced"` depth) |
 | `includeAnswer` | `boolean`/`string` | `false` | `true`/`"basic"` for quick answer, `"advanced"` for detailed |
 | `includeRawContent` | `boolean`/`string` | `false` | `true`/`"markdown"` for markdown, `"text"` for plain text |
 | `includeImages` | `boolean` | `false` | Include query-related images |
-| `includeDomains` | `string[]` | `[]` | Restrict to specific domains (max 300) |
+| `includeImageDescriptions` | `boolean` | `false` | AI-generated descriptions for images |
+| `includeFavicon` | `boolean` | `false` | Favicon URL per result |
+| `includeDomains` | `string[]` | `[]` | Restrict to specific domains (max 300, supports wildcards like `*.com`) |
 | `excludeDomains` | `string[]` | `[]` | Exclude specific domains (max 150) |
 | `timeRange` | `string` | — | `"day"`, `"week"`, `"month"`, `"year"` |
 | `startDate` | `string` | — | Filter from date (`YYYY-MM-DD`) |
 | `endDate` | `string` | — | Filter until date (`YYYY-MM-DD`) |
-| `chunksPerSource` | `number` | `3` | Chunks per result (only with `searchDepth: "advanced"`) |
 | `country` | `string` | — | Boost results from a country (general topic only) |
-| `autoParameters` | `boolean` | `false` | Auto-configure params based on query intent |
+| `autoParameters` | `boolean` | `false` | Auto-configure params based on query intent (may upgrade depth) |
 | `exactMatch` | `boolean` | `false` | Require exact quoted phrases in results |
+| `includeUsage` | `boolean` | `false` | Include credit usage info in response |
+
+**Search depth tradeoffs:**
+
+| Depth | Latency | Content Type | Credits |
+|-------|---------|--------------|---------|
+| `ultra-fast` | Lowest | NLP content summary | 1 |
+| `fast` | Low | Reranked chunks | 1 |
+| `basic` | Medium | NLP content summary | 1 |
+| `advanced` | Higher | Reranked chunks | 2 |
 
 ### Response
 
@@ -93,19 +107,21 @@ const response = await client.search("latest developments in quantum computing")
       score: 0.99,
       rawContent: "...",          // if includeRawContent
       publishedDate: "...",       // if topic="news"
+      favicon: "...",             // if includeFavicon
     }
   ],
   answer: "...",          // if includeAnswer
   images: [...],          // if includeImages
   responseTime: 1.09,
-  requestId: "..."
+  requestId: "...",
+  usage: { credits: 1 }  // if includeUsage
 }
 ```
 
 ### Advanced Search Example
 
 ```javascript
-const response = await client.search("How many countries use Monday.com?", {
+const response = await client.search("How many countries use Daylight Saving Time?", {
   searchDepth: "advanced",
   maxResults: 10,
   includeAnswer: "advanced",
@@ -165,15 +181,18 @@ const response = await client.extract(["https://en.wikipedia.org/wiki/Quantum_co
 | `format` | `string` | `"markdown"` | `"markdown"` or `"text"` |
 | `query` | `string` | — | Rerank chunks by relevance to this query |
 | `chunksPerSource` | `number` | `3` | Chunks per URL (1–5, requires `query`) |
+| `includeImages` | `boolean` | `false` | Include extracted image URLs |
+| `includeFavicon` | `boolean` | `false` | Favicon URL per result |
 | `timeout` | `number` | — | Timeout in seconds (1.0–60.0) |
+| `includeUsage` | `boolean` | `false` | Include credit usage info in response |
 
 ### Example with Query Filtering
 
 ```javascript
 const response = await client.extract(
-  ["https://example.com/ml-healthcare", "https://example.com/ai-diagnostics"],
+  ["https://en.wikipedia.org/wiki/FA_Cup", "https://en.wikipedia.org/wiki/UEFA_Champions_League"],
   {
-    query: "AI diagnostic tools accuracy",
+    query: "past champions",
     chunksPerSource: 2,
     extractDepth: "advanced"
   }
@@ -195,7 +214,7 @@ Intelligently traverse a website and extract content from discovered pages.
 
 ```javascript
 const response = await client.crawl("https://docs.tavily.com", {
-  instructions: "Find all pages about the Python SDK"
+  instructions: "Find all pages about the JavaScript SDK"
 });
 ```
 
@@ -204,24 +223,30 @@ const response = await client.crawl("https://docs.tavily.com", {
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` **(required)** | `string` | — | Starting URL |
-| `maxDepth` | `number` | `1` | Levels deep to crawl (each level increases time exponentially) |
-| `maxBreadth` | `number` | `20` | Max links to follow per page |
+| `maxDepth` | `number` | `1` | Levels deep to crawl (1–5, each level increases time exponentially) |
+| `maxBreadth` | `number` | `20` | Max links to follow per page (1–500) |
 | `limit` | `number` | `50` | Total max pages to crawl |
 | `instructions` | `string` | — | Natural language guidance to focus the crawl |
-| `chunksPerSource` | `number` | — | Content chunks per page (requires `instructions`) |
+| `chunksPerSource` | `number` | `3` | Chunks per page (1–5, requires `instructions`) |
 | `selectPaths` | `string[]` | — | Regex patterns for paths to include |
 | `excludePaths` | `string[]` | — | Regex patterns for paths to exclude |
 | `selectDomains` | `string[]` | — | Regex patterns for domains to include |
 | `excludeDomains` | `string[]` | — | Regex patterns for domains to exclude |
+| `allowExternal` | `boolean` | `true` | Include links to external domains |
 | `extractDepth` | `string` | `"basic"` | `"basic"` or `"advanced"` |
+| `format` | `string` | `"markdown"` | `"markdown"` or `"text"` |
+| `includeImages` | `boolean` | `false` | Include extracted image URLs |
+| `includeFavicon` | `boolean` | `false` | Favicon URL per result |
+| `timeout` | `number` | `150` | Max wait time in seconds (10–150) |
+| `includeUsage` | `boolean` | `false` | Include credit usage info in response |
 
 ### Focused Crawl Example
 
 ```javascript
-const response = await client.crawl("https://docs.example.com", {
+const response = await client.crawl("https://docs.tavily.com", {
   maxDepth: 2,
   limit: 100,
-  instructions: "Find all API reference documentation",
+  instructions: "Find all pages about the JavaScript SDK",
   selectPaths: ["/docs/.*", "/api/.*"],
   excludePaths: ["/private/.*", "/admin/.*"],
   extractDepth: "advanced"
@@ -238,7 +263,7 @@ Discover site structure without extracting content. Returns a list of URLs.
 
 ```javascript
 const response = await client.map("https://docs.tavily.com", {
-  instructions: "Find all pages on the Python SDK"
+  instructions: "Find all pages on the JavaScript SDK"
 });
 ```
 
@@ -247,12 +272,17 @@ const response = await client.map("https://docs.tavily.com", {
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` **(required)** | `string` | — | Starting URL |
-| `maxDepth` | `number` | `1` | Levels deep to map |
-| `maxBreadth` | `number` | `20` | Max links per page |
+| `maxDepth` | `number` | `1` | Levels deep to map (1–5) |
+| `maxBreadth` | `number` | `20` | Max links per page (1–500) |
 | `limit` | `number` | `50` | Total max URLs |
 | `instructions` | `string` | — | Focus the mapping with natural language |
 | `selectPaths` | `string[]` | — | Regex path patterns to include |
 | `excludePaths` | `string[]` | — | Regex path patterns to exclude |
+| `selectDomains` | `string[]` | — | Regex patterns for domains to include |
+| `excludeDomains` | `string[]` | — | Regex patterns for domains to exclude |
+| `allowExternal` | `boolean` | `true` | Include links to external domains |
+| `timeout` | `number` | `150` | Max wait time in seconds (10–150) |
+| `includeUsage` | `boolean` | `false` | Include credit usage info in response |
 
 ### Response
 
@@ -260,8 +290,8 @@ const response = await client.map("https://docs.tavily.com", {
 {
   baseUrl: "https://docs.tavily.com",
   results: [
-    "https://docs.tavily.com/sdk/python/reference",
-    "https://docs.tavily.com/sdk/python/quick-start"
+    "https://docs.tavily.com/sdk/javascript/reference",
+    "https://docs.tavily.com/sdk/javascript/quick-start"
   ],
   responseTime: 8.43,
   requestId: "..."
@@ -269,6 +299,39 @@ const response = await client.map("https://docs.tavily.com", {
 ```
 
 **Tip:** Use Map first to discover structure, then Crawl with discovered paths for focused extraction.
+
+## Research
+
+End-to-end AI-powered research with automatic source gathering and synthesis. Research tasks are asynchronous — start with `research()`, poll with `getResearch()`.
+
+```javascript
+const result = await client.research({
+  input: "Analyze competitive landscape for AI search APIs in 2026",
+  model: "pro"
+});
+
+const requestId = result.requestId;
+
+let response = await client.getResearch(requestId);
+while (!["completed", "failed"].includes(response.status)) {
+  await new Promise(r => setTimeout(r, 10000));
+  response = await client.getResearch(requestId);
+}
+
+console.log(response.content);
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `input` **(required)** | `string` | — | The research topic or question |
+| `model` | `string` | `"auto"` | `"mini"` (focused), `"pro"` (comprehensive), or `"auto"` |
+| `stream` | `boolean` | `false` | Enable streaming responses (SSE) |
+| `outputSchema` | `object` | — | JSON Schema for structured output |
+| `citationFormat` | `string` | `"numbered"` | `"numbered"`, `"mla"`, `"apa"`, or `"chicago"` |
+
+**Credits:** 4–110 per request (mini), 15–250 per request (pro).
 
 ## Search Then Extract Pattern
 

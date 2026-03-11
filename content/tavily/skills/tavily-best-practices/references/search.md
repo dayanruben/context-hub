@@ -47,7 +47,7 @@ Controls the latency vs. relevance tradeoff:
 - `ultra-fast`: Latency-critical (real-time chat, autocomplete)
 - `fast`: Need chunks but latency matters
 - `basic`: General-purpose, balanced relevance and latency
-- `advanced`: Specific information queries, precision matters - default (Still fast and suitable for almost all use cases) 
+- `advanced`: Specific information queries, precision matters (still fast and suitable for almost all use cases) 
 
 ## Key Parameters
 
@@ -55,20 +55,22 @@ Controls the latency vs. relevance tradeoff:
 |-----------|------|---------|-------------|
 | `query` | string | Required | Search query (keep under 400 chars) |
 | `search_depth` | enum | `"basic"` | `"ultra-fast"`, `"fast"`, `"basic"`, `"advanced"` |
-| `chunks_per_source` | integer | 3 | Chunks per source (advanced/fast depth only) |
+| `topic` | enum | `"general"` | `"general"`, `"news"`, or `"finance"` |
+| `chunks_per_source` | integer | 3 | Chunks per source (1–3, fast/advanced depth only) |
 | `max_results` | integer | 5 | Maximum results (0-20) |
 | `time_range` | enum | null | `"day"`, `"week"`, `"month"`, `"year"` |
 | `start_date` | string | null | Results after date (YYYY-MM-DD) |
 | `end_date` | string | null | Results before date (YYYY-MM-DD) |
 | `include_domains` | array | [] | Domains to include (max 300, supports wildcards like `*.com`) |
 | `exclude_domains` | array | [] | Domains to exclude (max 150) |
-| `country` | enum | null | Boost results from country |
+| `country` | enum | null | Boost results from country (general topic only) |
 | `include_answer` | bool/enum | false | `true`/`"basic"` or `"advanced"` for LLM answer |
 | `include_raw_content` | bool/enum | false | `true`/`"markdown"` or `"text"` for full page |
 | `include_images` | boolean | false | Include image results |
 | `include_image_descriptions` | boolean | false | AI descriptions for images |
 | `include_favicon` | boolean | false | Favicon URL per result |
 | `auto_parameters` | boolean | false | Auto-configure based on query intent |
+| `exact_match` | boolean | false | Require exact quoted phrases in results |
 | `include_usage` | boolean | false | Include credit usage info |
 
 **Notes:**

@@ -211,6 +211,7 @@ Use `output_schema` to receive research in a predefined JSON structure.
 
 ```python
 schema = {
+    "type": "object",
     "properties": {
         "summary": {
             "type": "string",
@@ -257,6 +258,7 @@ stream = client.research(
     model="mini",
     stream=True,
     output_schema={
+        "type": "object",
         "properties": {
             "summary": {"type": "string", "description": "Executive summary"},
             "key_points": {"type": "array", "items": {"type": "string"}}

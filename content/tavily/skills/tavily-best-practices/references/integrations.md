@@ -369,7 +369,7 @@ def handle_tool_call(tool_call):
 
 # Chat completion with tools
 response = openai_client.chat.completions.create(
-    model="gpt-4",
+    model="gpt-4.1",
     messages=[{"role": "user", "content": "What are the latest AI trends?"}],
     tools=tools
 )
@@ -385,7 +385,7 @@ if response.choices[0].message.tool_calls:
         {"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(search_results)}
     ]
     final = openai_client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4.1",
         messages=messages
     )
 ```
@@ -629,7 +629,7 @@ import { openai } from "@ai-sdk/openai";
 
 // Search
 const result = await generateText({
-  model: openai("gpt-4"),
+  model: openai("gpt-4.1"),
   prompt: "What are the latest AI developments?",
   tools: {
     tavilySearch: tavilySearch({
@@ -641,7 +641,7 @@ const result = await generateText({
 
 // Crawl
 const crawlResult = await generateText({
-  model: openai("gpt-4"),
+  model: openai("gpt-4.1"),
   prompt: "Crawl tavily.com and summarize their features",
   tools: {
     tavilyCrawl: tavilyCrawl({

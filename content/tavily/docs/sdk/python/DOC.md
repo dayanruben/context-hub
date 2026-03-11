@@ -6,8 +6,8 @@ metadata:
   versions: "0.7.23"
   revision: 1
   updated-on: "2026-03-11"
-  source: official
-  tags: "tavily,search,extract,crawl,research,ai,agents,rag"
+  source: maintainer
+  tags: "tavily,search,extract,crawl,research,ai,agents,rag,web-search,web-scraping"
 ---
 # Tavily Python SDK
 
@@ -70,21 +70,33 @@ response = client.search("latest developments in quantum computing")
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `query` **(required)** | `str` | — | Search query (keep under 400 chars) |
-| `search_depth` | `str` | `"basic"` | `"basic"` or `"advanced"`. Advanced returns reranked chunks (2 credits) |
+| `search_depth` | `str` | `"basic"` | `"ultra-fast"`, `"fast"`, `"basic"`, or `"advanced"` |
 | `topic` | `str` | `"general"` | `"general"`, `"news"`, or `"finance"` |
 | `max_results` | `int` | `5` | Number of results (0–20) |
+| `chunks_per_source` | `int` | `3` | Chunks per result (1–3, only with `"fast"` or `"advanced"` depth) |
 | `include_answer` | `bool`/`str` | `False` | `True`/`"basic"` for quick answer, `"advanced"` for detailed |
 | `include_raw_content` | `bool`/`str` | `False` | `True`/`"markdown"` for markdown, `"text"` for plain text |
 | `include_images` | `bool` | `False` | Include query-related images |
-| `include_domains` | `list[str]` | `[]` | Restrict to specific domains (max 300) |
+| `include_image_descriptions` | `bool` | `False` | AI-generated descriptions for images |
+| `include_favicon` | `bool` | `False` | Favicon URL per result |
+| `include_domains` | `list[str]` | `[]` | Restrict to specific domains (max 300, supports wildcards like `*.com`) |
 | `exclude_domains` | `list[str]` | `[]` | Exclude specific domains (max 150) |
 | `time_range` | `str` | — | `"day"`, `"week"`, `"month"`, `"year"` |
 | `start_date` | `str` | — | Filter from date (`YYYY-MM-DD`) |
 | `end_date` | `str` | — | Filter until date (`YYYY-MM-DD`) |
-| `chunks_per_source` | `int` | `3` | Chunks per result (only with `search_depth="advanced"`) |
 | `country` | `str` | — | Boost results from a country (general topic only) |
-| `auto_parameters` | `bool` | `False` | Auto-configure params based on query intent |
+| `auto_parameters` | `bool` | `False` | Auto-configure params based on query intent (may upgrade depth) |
 | `exact_match` | `bool` | `False` | Require exact quoted phrases in results |
+| `include_usage` | `bool` | `False` | Include credit usage info in response |
+
+**Search depth tradeoffs:**
+
+| Depth | Latency | Content Type | Credits |
+|-------|---------|--------------|---------|
+| `ultra-fast` | Lowest | NLP content summary | 1 |
+| `fast` | Low | Reranked chunks | 1 |
+| `basic` | Medium | NLP content summary | 1 |
+| `advanced` | Higher | Reranked chunks | 2 |
 
 ### Response
 
@@ -99,12 +111,14 @@ response = client.search("latest developments in quantum computing")
             "score": 0.99,
             "raw_content": "...",         # if include_raw_content
             "published_date": "...",       # if topic="news"
+            "favicon": "...",             # if include_favicon
         }
     ],
     "answer": "...",          # if include_answer
     "images": [...],          # if include_images
     "response_time": 1.09,
-    "request_id": "..."
+    "request_id": "...",
+    "usage": {"credits": 1}  # if include_usage
 }
 ```
 
@@ -173,17 +187,20 @@ response = client.extract(urls=["https://en.wikipedia.org/wiki/Quantum_computing
 | `format` | `str` | `"markdown"` | `"markdown"` or `"text"` |
 | `query` | `str` | — | Rerank chunks by relevance to this query |
 | `chunks_per_source` | `int` | `3` | Chunks per URL (1–5, requires `query`) |
+| `include_images` | `bool` | `False` | Include extracted image URLs |
+| `include_favicon` | `bool` | `False` | Favicon URL per result |
 | `timeout` | `float` | — | Timeout in seconds (1.0–60.0) |
+| `include_usage` | `bool` | `False` | Include credit usage info in response |
 
 ### Example with Query Filtering
 
 ```python
 response = client.extract(
     urls=[
-        "https://example.com/ml-healthcare",
-        "https://example.com/ai-diagnostics"
+        "https://en.wikipedia.org/wiki/FA_Cup",
+        "https://en.wikipedia.org/wiki/UEFA_Champions_League"
     ],
-    query="AI diagnostic tools accuracy",
+    query="past champions",
     chunks_per_source=2,
     extract_depth="advanced"
 )
@@ -212,27 +229,32 @@ response = client.crawl(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` **(required)** | `str` | — | Starting URL |
-| `max_depth` | `int` | `1` | Levels deep to crawl (each level increases time exponentially) |
-| `max_breadth` | `int` | `20` | Max links to follow per page |
+| `max_depth` | `int` | `1` | Levels deep to crawl (1–5, each level increases time exponentially) |
+| `max_breadth` | `int` | `20` | Max links to follow per page (1–500) |
 | `limit` | `int` | `50` | Total max pages to crawl |
 | `instructions` | `str` | — | Natural language guidance to focus the crawl |
-| `chunks_per_source` | `int` | — | Content chunks per page (requires `instructions`) |
+| `chunks_per_source` | `int` | `3` | Chunks per page (1–5, requires `instructions`) |
 | `select_paths` | `list[str]` | — | Regex patterns for paths to include |
 | `exclude_paths` | `list[str]` | — | Regex patterns for paths to exclude |
 | `select_domains` | `list[str]` | — | Regex patterns for domains to include |
 | `exclude_domains` | `list[str]` | — | Regex patterns for domains to exclude |
+| `allow_external` | `bool` | `True` | Include links to external domains |
 | `extract_depth` | `str` | `"basic"` | `"basic"` or `"advanced"` |
+| `format` | `str` | `"markdown"` | `"markdown"` or `"text"` |
+| `include_images` | `bool` | `False` | Include extracted image URLs |
+| `include_favicon` | `bool` | `False` | Favicon URL per result |
+| `timeout` | `float` | `150` | Max wait time in seconds (10–150) |
+| `include_usage` | `bool` | `False` | Include credit usage info in response |
 
 ### Focused Crawl Example
 
 ```python
 response = client.crawl(
-    url="https://docs.example.com",
+    url="https://docs.tavily.com",
     max_depth=2,
     limit=100,
-    instructions="Find all API reference documentation",
+    instructions="Find all pages about the Python SDK",
     select_paths=["/docs/.*", "/api/.*"],
-    exclude_paths=["/private/.*", "/admin/.*"],
     extract_depth="advanced"
 )
 
@@ -256,12 +278,17 @@ response = client.map(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` **(required)** | `str` | — | Starting URL |
-| `max_depth` | `int` | `1` | Levels deep to map |
-| `max_breadth` | `int` | `20` | Max links per page |
+| `max_depth` | `int` | `1` | Levels deep to map (1–5) |
+| `max_breadth` | `int` | `20` | Max links per page (1–500) |
 | `limit` | `int` | `50` | Total max URLs |
 | `instructions` | `str` | — | Focus the mapping with natural language |
 | `select_paths` | `list[str]` | — | Regex path patterns to include |
 | `exclude_paths` | `list[str]` | — | Regex path patterns to exclude |
+| `select_domains` | `list[str]` | — | Regex patterns for domains to include |
+| `exclude_domains` | `list[str]` | — | Regex patterns for domains to exclude |
+| `allow_external` | `bool` | `True` | Include links to external domains |
+| `timeout` | `float` | `150` | Max wait time in seconds (10–150) |
+| `include_usage` | `bool` | `False` | Include credit usage info in response |
 
 ### Response
 
@@ -278,6 +305,52 @@ response = client.map(
 ```
 
 **Tip:** Use Map first to discover structure, then Crawl with discovered paths for focused extraction.
+
+## Research
+
+End-to-end AI-powered research with automatic source gathering and synthesis. Research tasks are asynchronous — start with `research()`, poll with `get_research()`.
+
+```python
+import time
+
+result = client.research(
+    input="Analyze competitive landscape for AI search APIs in 2026",
+    model="pro"
+)
+request_id = result["request_id"]
+
+response = client.get_research(request_id)
+while response["status"] not in ["completed", "failed"]:
+    time.sleep(10)
+    response = client.get_research(request_id)
+
+print(response["content"])
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `input` **(required)** | `str` | — | The research topic or question |
+| `model` | `str` | `"auto"` | `"mini"` (focused), `"pro"` (comprehensive), or `"auto"` |
+| `stream` | `bool` | `False` | Enable streaming responses (SSE) |
+| `output_schema` | `dict` | — | JSON Schema for structured output |
+| `citation_format` | `str` | `"numbered"` | `"numbered"`, `"mla"`, `"apa"`, or `"chicago"` |
+
+### Streaming
+
+```python
+stream = client.research(
+    input="Latest developments in quantum computing",
+    model="pro",
+    stream=True
+)
+
+for chunk in stream:
+    print(chunk.decode('utf-8'))
+```
+
+**Credits:** 4–110 per request (mini), 15–250 per request (pro).
 
 ## Async Usage
 
