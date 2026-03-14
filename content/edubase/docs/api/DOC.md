@@ -4,6 +4,7 @@ description: "EduBase API for managing online exams, quizzes, users, and program
 metadata:
   languages: "http"
   versions: "v1"
+  revision: 1
   updated-on: "2026-03-14"
   source: maintainer
   tags: "edubase,api,quiz,exam,lms,education,lti,assessment,compliance,training,testing"
